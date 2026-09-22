@@ -23,8 +23,9 @@ path end to end, rather than five agents all half-simulated.
   parallel fan-out (Control Tower + Calendar Agent consulted at once, with a
   `defer` join so both are waited on regardless of how many negotiation
   rounds the calendar branch takes), a 2-round negotiation cap that
-  escalates to Control Tower, and a persistent approval gate that never
-  auto-sends an email.
+  escalates to Control Tower, a bounded reject → revise → re-review loop
+  when Control Tower rejects Task Agent's proposal, and a persistent
+  approval gate that never auto-sends an email.
 
 ## What's demo-mode-only
 
@@ -121,14 +122,16 @@ These tests don't call any real API — they script exactly what each agent
 "decides" at each step (`tests/fakes.py`) and assert on the resulting
 graph state. This is what actually verifies the branching logic (the
 round-cap, the correction loop, the parallel join) works, independent of
-what a live LLM happens to say on a given run. All 9 pass as of this build:
-5 on the graph itself, including the two trickiest cases — a deadlock
-resolved after exactly 2 rounds, and convergence via the Task Agent
-accepting a counter-proposal, both routing into the same `decide_action`
-join node, confirming the `defer=True` fan-in handles variable-length
-negotiation correctly — plus 4 on `testing/send_test_email.py`'s message
-construction and SMTP call shape (mocked, no real network or credentials
-needed to run the suite).
+what a live LLM happens to say on a given run. All 11 pass as of this
+build: 7 on the graph itself, including the two trickiest negotiation
+cases — a deadlock resolved after exactly 2 rounds, and convergence via
+the Task Agent accepting a counter-proposal, both routing into the same
+`decide_action` join node, confirming the `defer=True` fan-in handles
+variable-length negotiation correctly — plus the reject → revise →
+re-review loop resolving on the one allowed retry, and standing firm
+(`final_action: "rejected"`) once retries are exhausted, plus 4 on
+`testing/send_test_email.py`'s message construction and SMTP call shape
+(mocked, no real network or credentials needed to run the suite).
 
 ## Setting up live mode (real Gmail + Calendar)
 
@@ -186,6 +189,19 @@ graph needs to change.
   but the graph never calls a send function — `decide_action` only ever
   enqueues the draft via `approvals/approval_queue.py`, which requires an
   explicit `approve()` call before anything would be sent.
+- **Control Tower rejection was a dead end:** previously, a tier-two reject
+  just discarded the proposal (`final_action: "rejected"`) and dropped
+  `corrections` on the floor. `task_revise_proposal` now feeds that
+  correction back to Task Agent for one bounded revise-and-re-review pass
+  (`control_tower_approve → [revise → re-review]* → decide_action`), the
+  same reject-then-retry shape as the classification loop above — see
+  `test_control_tower_rejects_then_approves_revised_proposal` and
+  `test_control_tower_rejection_stands_after_round_cap`. Scoped
+  deliberately to what Control Tower actually gatekeeps (the action type,
+  the draft, the title); it does not retrigger the independent Calendar
+  Agent negotiation, which runs concurrently off the original proposal, so
+  a revision that changes `needs_calendar`/`proposed_datetime` won't get
+  re-checked for calendar conflicts.
 
 ## Project layout
 

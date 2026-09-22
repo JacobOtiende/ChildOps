@@ -1,11 +1,13 @@
 """
 LangGraph wiring for the ChildOps vertical slice: School -> Task -> (Control
-Tower approval || Calendar negotiation) -> decide_action.
+Tower approval [+ bounded reject/revise loop] || Calendar negotiation) ->
+decide_action.
 
 This is the piece that turns the design doc's prose ("task agent checks with
 control tower... at the same time... checks with calendar agent... waits for
 both") into an actual graph with real branching, a bounded negotiation loop,
-and a deadlock escalation path — not a fixed five-step pipeline.
+a bounded task-approval correction loop, and a deadlock escalation path —
+not a fixed five-step pipeline.
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ from tools.calendar_tool import create_event
 
 DEFAULT_EVENT_DURATION_MINUTES = 60
 MAX_CLASSIFICATION_CORRECTIONS = 1
+MAX_TASK_APPROVAL_CORRECTIONS = 1
 
 
 @dataclass
@@ -91,7 +94,13 @@ def make_correct_classification_node(deps: Deps):
 def make_task_propose_node(deps: Deps):
     def node(state: ChildOpsState) -> dict:
         proposal = task_agent.score_and_propose(deps.client, state["classification"], deps.today_iso(), model=deps.model)
-        return {"task_proposal": proposal, "negotiation_round": 0, "negotiation_history": [], "agreed_datetime": None}
+        return {
+            "task_proposal": proposal,
+            "negotiation_round": 0,
+            "negotiation_history": [],
+            "agreed_datetime": None,
+            "task_approval_correction_rounds": 0,
+        }
 
     return node
 
@@ -138,6 +147,45 @@ def make_control_tower_approve_node(deps: Deps):
             "control_tower_tier_two": tier_two,
             "proposal_approved": approved,
         }
+
+    return node
+
+
+def make_route_after_approval(deps: Deps):
+    def route(state: ChildOpsState) -> str:
+        if state.get("proposal_approved", True):
+            return "join"
+        rounds = state.get("task_approval_correction_rounds", 0)
+        if rounds < MAX_TASK_APPROVAL_CORRECTIONS:
+            return "revise"
+        return "join"  # retries exhausted; the rejection stands
+
+    return route
+
+
+def make_task_revise_proposal_node(deps: Deps):
+    """Feeds Control Tower's rejection back to Task Agent for a bounded
+    reject -> revise -> re-review loop, mirroring the classification
+    correction loop above. Scoped to fields Control Tower actually
+    gatekeeps (proposed_action, needs_email, proposed_title, rationale);
+    it does NOT retrigger the independent Calendar Agent negotiation, which
+    runs concurrently off the original proposal per the design's parallel
+    fan-out -- a revision that changes needs_calendar/proposed_datetime
+    won't be re-checked for calendar conflicts."""
+
+    def node(state: ChildOpsState) -> dict:
+        tier_two = state.get("control_tower_tier_two") or {}
+        correction_note = tier_two.get("corrections") or "Control Tower rejected this without a specific correction."
+        revised = task_agent.revise_proposal(
+            deps.client,
+            state["classification"],
+            deps.today_iso(),
+            state["task_proposal"],
+            correction_note,
+            model=deps.model,
+        )
+        rounds = state.get("task_approval_correction_rounds", 0) + 1
+        return {"task_proposal": revised, "task_approval_correction_rounds": rounds}
 
     return node
 
@@ -322,6 +370,7 @@ def build_graph(deps: Deps):
     graph.add_node("correct_classification", make_correct_classification_node(deps))
     graph.add_node("task_propose", make_task_propose_node(deps))
     graph.add_node("control_tower_approve", make_control_tower_approve_node(deps))
+    graph.add_node("task_revise_proposal", make_task_revise_proposal_node(deps))
     graph.add_node("calendar_negotiate", make_calendar_negotiate_node(deps))
     graph.add_node("task_reconsider", make_task_reconsider_node(deps))
     graph.add_node("control_tower_deadlock", make_control_tower_deadlock_node(deps))
@@ -354,7 +403,12 @@ def build_graph(deps: Deps):
         {"join": "decide_action", "renegotiate": "calendar_negotiate", "deadlock": "control_tower_deadlock"},
     )
     graph.add_edge("control_tower_deadlock", "decide_action")
-    graph.add_edge("control_tower_approve", "decide_action")
+    graph.add_conditional_edges(
+        "control_tower_approve",
+        make_route_after_approval(deps),
+        {"join": "decide_action", "revise": "task_revise_proposal"},
+    )
+    graph.add_edge("task_revise_proposal", "control_tower_approve")
 
     graph.add_edge("decide_action", END)
 

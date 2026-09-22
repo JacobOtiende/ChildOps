@@ -30,6 +30,7 @@ class ChildOpsState(TypedDict, total=False):
     control_tower_tier_one: dict[str, Any]
     control_tower_tier_two: Optional[dict[str, Any]]
     proposal_approved: bool
+    task_approval_correction_rounds: int  # bounds the reject -> revise -> re-review loop
 
     # --- Calendar negotiation ---
     negotiation_round: int

@@ -65,6 +65,39 @@ def score_and_propose(client, classification: dict, today_iso: str, model: str |
     )
 
 
+REVISE_SYSTEM_PROMPT = """You are the Task Follow-Up Agent revising your own
+proposal after Control Tower rejected it. Incorporate Control Tower's stated
+correction directly -- do not repeat the same mistake. You still do not
+execute anything yourself; Control Tower reviews this revised proposal
+before anything downstream acts on it."""
+
+
+def revise_proposal(
+    client,
+    classification: dict,
+    today_iso: str,
+    previous_proposal: dict,
+    correction_note: str,
+    model: str | None = None,
+) -> dict:
+    user_content = (
+        f"Today's date is {today_iso}.\n\n"
+        f"Classified school item:\n{classification}\n\n"
+        f"Your previous proposal:\n{previous_proposal}\n\n"
+        f"Control Tower rejected it with this correction:\n{correction_note}\n\n"
+        "Propose a corrected action using the propose_task_action tool."
+    )
+    return structured_call(
+        client,
+        system=REVISE_SYSTEM_PROMPT,
+        user_content=user_content,
+        tool_name="propose_task_action",
+        tool_schema=PROPOSE_SCHEMA,
+        tool_description="Record the revised urgency/importance score and corrected proposed action.",
+        model=model,
+    )
+
+
 RECONSIDER_SCHEMA = {
     "type": "object",
     "properties": {

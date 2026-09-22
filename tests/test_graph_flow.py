@@ -262,3 +262,120 @@ def test_negotiation_converges_when_task_agent_accepts_counter():
     assert result.get("deadlock_decision") is None
     assert result["final_action"] == "event_created"
     assert calendar_service._events.created[0]["start"]["dateTime"] == "2026-09-22T19:00:00"
+
+
+def test_control_tower_rejects_then_approves_revised_proposal():
+    script = {
+        "classify_school_email": [
+            {
+                "category": "deadline",
+                "summary": "Doctor's note required for absence",
+                "extracted_date": None,
+                "requires_calendar_event": False,
+                "requires_email_response": False,
+                "confidence": 0.85,
+            }
+        ],
+        "check_classification": [{"needs_correction": False, "correction_note": None}],
+        "propose_task_action": [
+            # Round 0: Task Agent under-reacts.
+            {
+                "urgency_score": 4,
+                "importance_score": 5,
+                "proposed_action": "log_only",
+                "needs_calendar": False,
+                "needs_email": False,
+                "proposed_title": "",
+                "proposed_datetime": None,
+                "rationale": "Noting the absence.",
+            },
+            # Round 1 (post-revision): incorporates Control Tower's correction.
+            {
+                "urgency_score": 4,
+                "importance_score": 5,
+                "proposed_action": "draft_email_response",
+                "needs_calendar": False,
+                "needs_email": True,
+                "proposed_title": "",
+                "proposed_datetime": None,
+                "rationale": "High urgency/importance warrants a reply, not just a log entry.",
+            },
+        ],
+        "tier_one_triage": [
+            {"flagged": True, "flag_reason": "log_only doesn't match the stated urgency/importance."},
+            {"flagged": False, "flag_reason": None},
+        ],
+        "tier_two_decision": [
+            {
+                "approved": False,
+                "corrections": "Draft an email reply instead of only logging this.",
+                "reasoning": "Urgency 4 and importance 5 warrant more than a passive log entry.",
+            },
+            {"approved": True, "corrections": None, "reasoning": "Revised proposal now matches the urgency/importance."},
+        ],
+        "draft_email": [{"to": "frontdesk@ourschool.edu", "subject": "Re: absence note", "body": "Attached is the note."}],
+    }
+    deps, client, calendar_service, approval_queue = make_deps(script)
+    graph = build_graph(deps)
+
+    result = graph.invoke(base_email())
+
+    assert result["task_approval_correction_rounds"] == 1
+    assert result["task_proposal"]["proposed_action"] == "draft_email_response"
+    assert result["final_action"] == "email_queued_for_approval"
+    assert result["approval_id"] in approval_queue.pending
+
+
+def test_control_tower_rejection_stands_after_round_cap():
+    script = {
+        "classify_school_email": [
+            {
+                "category": "deadline",
+                "summary": "Doctor's note required for absence",
+                "extracted_date": None,
+                "requires_calendar_event": False,
+                "requires_email_response": False,
+                "confidence": 0.85,
+            }
+        ],
+        "check_classification": [{"needs_correction": False, "correction_note": None}],
+        "propose_task_action": [
+            {
+                "urgency_score": 4,
+                "importance_score": 5,
+                "proposed_action": "log_only",
+                "needs_calendar": False,
+                "needs_email": False,
+                "proposed_title": "",
+                "proposed_datetime": None,
+                "rationale": "Noting the absence.",
+            },
+            # The one allowed revision still isn't good enough.
+            {
+                "urgency_score": 4,
+                "importance_score": 5,
+                "proposed_action": "log_only",
+                "needs_calendar": False,
+                "needs_email": False,
+                "proposed_title": "",
+                "proposed_datetime": None,
+                "rationale": "Still just noting the absence.",
+            },
+        ],
+        "tier_one_triage": [
+            {"flagged": True, "flag_reason": "log_only doesn't match the stated urgency/importance."},
+            {"flagged": True, "flag_reason": "Still doesn't match the stated urgency/importance."},
+        ],
+        "tier_two_decision": [
+            {"approved": False, "corrections": "Draft an email reply instead.", "reasoning": "Not enough."},
+            {"approved": False, "corrections": "Still not enough.", "reasoning": "Revision didn't address the correction."},
+        ],
+    }
+    deps, client, calendar_service, approval_queue = make_deps(script)
+    graph = build_graph(deps)
+
+    result = graph.invoke(base_email())
+
+    assert result["task_approval_correction_rounds"] == 1
+    assert result["final_action"] == "rejected"
+    assert len(approval_queue.pending) == 0

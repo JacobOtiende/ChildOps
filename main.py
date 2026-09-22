@@ -29,6 +29,8 @@ def summarize(result: dict) -> str:
     lines = [f"  final_action: {result.get('final_action')}"]
     if result.get("classification_correction_rounds"):
         lines.append(f"  classification was corrected by Control Tower ({result['classification_correction_rounds']} round(s))")
+    if result.get("task_approval_correction_rounds"):
+        lines.append(f"  Task Agent's proposal was revised after Control Tower rejection ({result['task_approval_correction_rounds']} round(s))")
     if result.get("negotiation_round"):
         lines.append(f"  calendar negotiation rounds: {result['negotiation_round']}")
     if result.get("deadlock_decision"):
