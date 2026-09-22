@@ -27,7 +27,7 @@ def _require(name: str, default: str | None = None) -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    anthropic_api_key: str
+    openai_api_key: str
     google_oauth_client_secrets: str
     google_oauth_token_path: str
     school_sender_allowlist: list[str]
@@ -49,14 +49,14 @@ def load_settings() -> Settings:
     allowlist_raw = os.environ.get("SCHOOL_SENDER_ALLOWLIST", "")
     allowlist = [s.strip() for s in allowlist_raw.split(",") if s.strip()]
 
-    # In demo mode we don't need a real Anthropic key to *load* config (tests
+    # In demo mode we don't need a real OpenAI key to *load* config (tests
     # inject a fake), but live mode must fail fast without one.
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if mode == "live" and not anthropic_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is required when CHILDOPS_MODE=live")
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if mode == "live" and not openai_key:
+        raise RuntimeError("OPENAI_API_KEY is required when CHILDOPS_MODE=live")
 
     return Settings(
-        anthropic_api_key=anthropic_key,
+        openai_api_key=openai_key,
         google_oauth_client_secrets=os.environ.get(
             "GOOGLE_OAUTH_CLIENT_SECRETS", "./credentials/client_secret.json"
         ),

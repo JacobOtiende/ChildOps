@@ -29,7 +29,7 @@ class Deps:
     stay pure functions of (deps, state) and are trivially testable with
     fakes — see tests/test_graph_flow.py."""
 
-    client: Any  # anthropic.Anthropic, or a fake with the same .messages.create surface
+    client: Any  # openai.OpenAI, or a fake with the same .chat.completions.create surface
     calendar_service: Any  # real googleapiclient service, or a fake
     calendar_id: str
     approval_queue: Any  # approvals.approval_queue.ApprovalQueue
@@ -125,6 +125,18 @@ def make_calendar_negotiate_node(deps: Deps):
         if not proposal.get("needs_calendar"):
             return {
                 "calendar_position": {"position": "accept", "reasoning": "No calendar event required."},
+                "agreed_datetime": None,
+            }
+        if not proposal.get("proposed_datetime"):
+            # Task Agent flagged needs_calendar but gave no concrete datetime
+            # to negotiate over (e.g. an email covering several dates at
+            # once) -- nothing to check for conflict, so skip negotiation
+            # rather than crash. decide_action logs this as an error.
+            return {
+                "calendar_position": {
+                    "position": "accept",
+                    "reasoning": "Task Agent did not provide a concrete datetime to negotiate.",
+                },
                 "agreed_datetime": None,
             }
 
@@ -236,19 +248,22 @@ def make_decide_action_node(deps: Deps):
 
         if proposal.get("needs_calendar"):
             agreed = state.get("agreed_datetime") or proposal.get("proposed_datetime")
-            try:
-                event_id = create_event(
-                    deps.calendar_service,
-                    deps.calendar_id,
-                    proposal["proposed_title"],
-                    agreed,
-                    _plus_minutes(agreed, DEFAULT_EVENT_DURATION_MINUTES),
-                    description=proposal.get("rationale", ""),
-                    source_agent="Task Agent + Calendar Agent (ChildOps)",
-                )
-                updates["event_id"] = event_id
-            except Exception as exc:  # real API calls can genuinely fail
-                errors.append(f"calendar create_event failed: {exc}")
+            if not agreed:
+                errors.append("needs_calendar was true but no concrete datetime was ever proposed; no event created")
+            else:
+                try:
+                    event_id = create_event(
+                        deps.calendar_service,
+                        deps.calendar_id,
+                        proposal["proposed_title"],
+                        agreed,
+                        _plus_minutes(agreed, DEFAULT_EVENT_DURATION_MINUTES),
+                        description=proposal.get("rationale", ""),
+                        source_agent="Task Agent + Calendar Agent (ChildOps)",
+                    )
+                    updates["event_id"] = event_id
+                except Exception as exc:  # real API calls can genuinely fail
+                    errors.append(f"calendar create_event failed: {exc}")
 
         if proposal.get("needs_email"):
             draft = task_agent.draft_email_response(deps.client, state["classification"], state["email_sender"], model=deps.model)

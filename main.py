@@ -5,7 +5,7 @@ Entry point.
     python main.py --review     # after a run, open the red-alert review loop
     CHILDOPS_MODE=live python main.py    # real Gmail polling + real Calendar
 
-Demo mode still makes REAL Anthropic API calls (you need ANTHROPIC_API_KEY
+Demo mode still makes REAL OpenAI API calls (you need OPENAI_API_KEY
 set) — the only thing it fakes is the Google side, so you can see genuine
 agent reasoning without first doing OAuth setup. See README.md.
 """
@@ -15,7 +15,7 @@ import argparse
 import json
 from datetime import datetime
 
-import anthropic
+import openai
 
 from approvals.approval_queue import ApprovalQueue, run_red_alert_loop
 from auth.google_auth import build_calendar_service, build_gmail_service
@@ -43,7 +43,7 @@ def summarize(result: dict) -> str:
 
 
 def run_demo(settings, args) -> None:
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = openai.OpenAI(api_key=settings.openai_api_key)
     calendar_service = InMemoryCalendarService(seed_events=default_seed_events(datetime.now()))
     approval_queue = ApprovalQueue(path="./data/pending_approvals.json")
 
@@ -78,7 +78,7 @@ def run_demo(settings, args) -> None:
 
 
 def run_live(settings, args) -> None:
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = openai.OpenAI(api_key=settings.openai_api_key)
     gmail_service = build_gmail_service(settings.google_oauth_client_secrets, settings.google_oauth_token_path)
     calendar_service = build_calendar_service(settings.google_oauth_client_secrets, settings.google_oauth_token_path)
     approval_queue = ApprovalQueue(path="./data/pending_approvals.json")

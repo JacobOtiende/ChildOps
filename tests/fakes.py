@@ -5,29 +5,44 @@ file — that's the point: these let us verify the GRAPH's branching logic
 independent of what a real LLM or a real Google API would return, which
 would make the tests flaky and slow instead of a fast correctness check.
 
-Live-mode behavior (main.py --mode live) uses the real anthropic client and
+Live-mode behavior (main.py --mode live) uses the real openai client and
 real Google API services from auth/google_auth.py — those are exercised by
 actually running the program with real credentials, not by these tests.
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 
-class FakeToolBlock:
-    def __init__(self, name: str, input_: dict):
-        self.type = "tool_use"
+class FakeFunctionCall:
+    def __init__(self, name: str, arguments: dict):
         self.name = name
-        self.input = input_
+        self.arguments = json.dumps(arguments)
+
+
+class FakeToolCall:
+    def __init__(self, name: str, arguments: dict):
+        self.function = FakeFunctionCall(name, arguments)
+
+
+class FakeMessage:
+    def __init__(self, tool_calls: list):
+        self.tool_calls = tool_calls
+
+
+class FakeChoice:
+    def __init__(self, message: FakeMessage):
+        self.message = message
 
 
 class FakeResponse:
-    def __init__(self, content: list):
-        self.content = content
+    def __init__(self, choices: list):
+        self.choices = choices
 
 
 class ScriptedClient:
-    """Stands in for anthropic.Anthropic. Scripted per tool name: each call
+    """Stands in for openai.OpenAI. Scripted per tool name: each call
     for a given tool pops the next queued response, in order, so a test can
     lay out exactly what each agent "decides" at each step of a multi-round
     conversation."""
@@ -35,10 +50,11 @@ class ScriptedClient:
     def __init__(self, script: dict[str, list[dict]]):
         self.script = {k: list(v) for k, v in script.items()}
         self.calls: list[str] = []
-        self.messages = self
+        self.chat = self
+        self.completions = self
 
     def create(self, **kwargs) -> FakeResponse:
-        tool_name = kwargs["tool_choice"]["name"]
+        tool_name = kwargs["tool_choice"]["function"]["name"]
         self.calls.append(tool_name)
         queue = self.script.get(tool_name)
         if not queue:
@@ -46,8 +62,8 @@ class ScriptedClient:
                 f"ScriptedClient has no queued response left for tool {tool_name!r}. "
                 f"Calls so far: {self.calls}"
             )
-        input_ = queue.pop(0)
-        return FakeResponse([FakeToolBlock(tool_name, input_)])
+        arguments = queue.pop(0)
+        return FakeResponse([FakeChoice(FakeMessage([FakeToolCall(tool_name, arguments)]))])
 
 
 class _Exec:

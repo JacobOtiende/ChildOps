@@ -16,7 +16,7 @@ path end to end, rather than five agents all half-simulated.
   Agent classifies, Task Agent scores urgency/importance and proposes an
   action, Calendar Agent negotiates, Control Tower runs its two-tier check,
   breaks deadlocks, and corrects School Agent. Every one of these is a real
-  Anthropic API call constrained to a structured tool schema, not a
+  OpenAI API call constrained to a structured tool schema, not a
   hardcoded if/else.
 - **Real orchestration logic** (`graph/build_graph.py`) — a LangGraph state
   graph with genuine branching: a bounded classification-correction loop, a
@@ -28,7 +28,7 @@ path end to end, rather than five agents all half-simulated.
 
 ## What's demo-mode-only
 
-`CHILDOPS_MODE=demo` (the default) still makes real Anthropic calls but
+`CHILDOPS_MODE=demo` (the default) still makes real OpenAI calls but
 swaps the Google Calendar for `tools/demo_calendar.py`, an in-memory
 calendar seeded with a couple of conflicting events — so you can see the
 negotiation/deadlock path fire without first doing Google OAuth setup. It
@@ -49,7 +49,7 @@ represented anywhere in this codebase.
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env: set ANTHROPIC_API_KEY (get one at console.anthropic.com)
+# edit .env: set OPENAI_API_KEY (get one at platform.openai.com/api-keys)
 python main.py
 ```
 

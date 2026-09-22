@@ -3,7 +3,7 @@ Real Google Calendar API calls for the Calendar Agent.
 
 Three tools, matching the schemas discussed in design: check_conflict,
 create_event, propose_alternates. These are the functions the Calendar
-Agent's LLM call is bound to via Anthropic tool-use — the model decides
+Agent's LLM call is bound to via OpenAI tool-use — the model decides
 which of these to call and with what arguments, this module just executes
 the real API request once it does.
 """
