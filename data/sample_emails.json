@@ -1,0 +1,17 @@
+[
+  {
+    "sender": "newsletter@ourschool.edu",
+    "subject": "This Week at Lincoln Elementary",
+    "body": "Reminders for this week: Science Fair projects are due next Thursday at 9:00am in the gym. Math homework packet is due Monday. Friday is Spirit Day - wear school colors. The PTA meeting is Tuesday at 6:00pm in the library."
+  },
+  {
+    "sender": "frontdesk@ourschool.edu",
+    "subject": "Attendance: Doctor's note required",
+    "body": "Your child has been marked absent for 3 consecutive days. Per school policy, a doctor's note is required to excuse these absences. Please schedule a pediatric visit and submit documentation within 5 school days."
+  },
+  {
+    "sender": "teacher.jsmith@ourschool.edu",
+    "subject": "Quick question about the field trip form",
+    "body": "Hi! I noticed the permission slip for next month's field trip hasn't come back yet. Could you let me know if you're able to sign and return it by Friday? Thanks!"
+  }
+]

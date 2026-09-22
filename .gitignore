@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+credentials/
+data/pending_approvals.json
+.pytest_cache/

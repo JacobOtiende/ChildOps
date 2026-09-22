@@ -1,0 +1,37 @@
+[
+  {
+    "id": "newsletter",
+    "display_from": "Lincoln Elementary",
+    "subject": "This Week at Lincoln Elementary",
+    "body": "Reminders for this week: Science Fair projects are due next Thursday at 9:00am in the gym. Math homework packet is due Monday. Friday is Spirit Day - wear school colors. The PTA meeting is Tuesday at 6:00pm in the library.",
+    "why": "Baseline multi-item classification/extraction test — no correction or negotiation expected."
+  },
+  {
+    "id": "doctor_note",
+    "display_from": "Lincoln Elementary Front Office",
+    "subject": "Attendance: Doctor's note required",
+    "body": "Your child has been marked absent for 3 consecutive days. Per school policy, a doctor's note is required to excuse these absences. Please schedule a pediatric visit and submit documentation within 5 school days.",
+    "why": "Exercises needs_calendar=true with real urgency; good candidate to see negotiation fire if your calendar has anything booked in the next 5 days at the proposed time."
+  },
+  {
+    "id": "field_trip_reply",
+    "display_from": "Ms. Smith",
+    "subject": "Quick question about the field trip form",
+    "body": "Hi! I noticed the permission slip for next month's field trip hasn't come back yet. Could you let me know if you're able to sign and return it by Friday? Thanks!",
+    "why": "Exercises needs_email=true — should end up queued in the approval loop, never auto-sent. Good test that the red-alert gate actually holds."
+  },
+  {
+    "id": "ambiguous_item",
+    "display_from": "Lincoln Elementary",
+    "subject": "Important update",
+    "body": "Please note the change for this Thursday. Details are in the portal. Let the office know if you have questions.",
+    "why": "Deliberately vague — no explicit category, date, or action. Good test of whether School Agent under-commits (low confidence) rather than guessing, and whether Control Tower's classification QC flags it."
+  },
+  {
+    "id": "conflicting_event",
+    "display_from": "Lincoln Elementary PTA",
+    "subject": "PTA Meeting - Time Change",
+    "body": "Note: this month's PTA meeting has moved to tomorrow at 9:00am in the library due to a scheduling conflict on our end.",
+    "why": "Short-notice, specific next-day time — a good candidate for a real conflict with your actual calendar, to see the Calendar Agent negotiate or Control Tower break a deadlock."
+  }
+]
