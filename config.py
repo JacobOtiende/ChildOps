@@ -39,7 +39,6 @@ class Settings:
     # place to tune without touching agent logic.
     negotiation_round_cap: int = 2
     control_tower_wake_interval_hours: int = 4
-    health_symptom_window_days: int = 3
 
 
 def load_settings() -> Settings:

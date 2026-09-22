@@ -37,12 +37,12 @@ replays `data/sample_emails.json` instead of polling live Gmail. Flip to
 
 ## What's design-only (not built)
 
-The Health Agent and Control Tower's grammar/tone-assist utility are
-specified in the design writeup but not implemented here — they're the
-parts least connected to proving autonomy (see the design discussion). The
-governance knobs they'd need (symptom threshold + window, parent-set
-trigger) are already stubbed in `config.py` (`health_symptom_window_days`)
-for whoever picks that up next.
+Control Tower's grammar/tone-assist utility is specified in the design
+writeup but not implemented here — it's the part least connected to
+proving autonomy (see the design discussion). This project is scoped to
+four agents only — School, Task, Calendar, and Control Tower; the Health
+Agent from the broader design is intentionally out of scope and not
+represented anywhere in this codebase.
 
 ## Quickstart (demo mode)
 
