@@ -18,11 +18,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-# Read-only Gmail (School Agent never needs to send/modify mail itself —
-# that's the whole point of the human-in-the-loop email gate) plus full
-# Calendar access (Calendar Agent needs to create/update/query events).
+# Read-only Gmail for polling (School Agent never modifies or deletes
+# mail) plus a narrow send-only scope -- used only by the human-approved
+# send path in approvals/approval_queue.py:run_red_alert_loop, never
+# automatically, which is the actual autonomy boundary here, not the
+# absence of send permission -- plus full Calendar access (Calendar Agent
+# needs to create/update/query events).
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/calendar",
 ]
 
