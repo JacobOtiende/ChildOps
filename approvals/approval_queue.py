@@ -15,7 +15,7 @@ import json
 import os
 import time
 import uuid
-from typing import Any
+from typing import Any, Callable, Optional
 
 
 class ApprovalQueue:
@@ -64,10 +64,24 @@ class ApprovalQueue:
         return self._load()[approval_id]["status"]
 
 
-def run_red_alert_loop(queue: ApprovalQueue, poll_seconds: int = 10, max_polls: int | None = None) -> None:
+def run_red_alert_loop(
+    queue: ApprovalQueue,
+    poll_seconds: int = 10,
+    max_polls: int | None = None,
+    send_fn: Optional[Callable[[dict[str, Any]], None]] = None,
+) -> None:
     """Keeps re-printing every pending draft until none remain, prompting
     for approve/edit/reject each pass. max_polls is for tests/demos only —
-    a real run leaves it None and lets this run indefinitely."""
+    a real run leaves it None and lets this run indefinitely.
+
+    send_fn, if given, is called with the (possibly-edited) draft dict on
+    approval to actually send it -- see main.py:run_live, which wires this
+    to tools.gmail_tool.send_email. Demo mode passes None since there's no
+    live Gmail service to send through, the same real-calls-except-Google
+    trade-off as the rest of demo mode; approval there stays a local status
+    flip. The send happens BEFORE the status flips to "approved", so a
+    failed send leaves the draft pending for retry instead of silently
+    marking something sent that wasn't."""
     polls = 0
     while True:
         pending = queue.list_pending()
@@ -81,12 +95,25 @@ def run_red_alert_loop(queue: ApprovalQueue, poll_seconds: int = 10, max_polls: 
             print(f"\n[{approval_id}]\nTo: {draft['to']}\nSubject: {draft['subject']}\n\n{draft['body']}\n")
             choice = input("Approve and send (a) / Edit body then send (e) / Reject (r) / Later (Enter): ").strip().lower()
             if choice == "a":
+                if send_fn is not None:
+                    try:
+                        send_fn(draft)
+                    except Exception as exc:
+                        print(f"Send failed, left pending for retry: {exc}")
+                        continue
                 queue.approve(approval_id)
-                print("Approved — would be sent now.")
+                print("Approved and sent." if send_fn is not None else "Approved — would be sent now.")
             elif choice == "e":
                 new_body = input("New body: ")
+                edited = {**draft, "body": new_body}
+                if send_fn is not None:
+                    try:
+                        send_fn(edited)
+                    except Exception as exc:
+                        print(f"Send failed, left pending for retry: {exc}")
+                        continue
                 queue.approve(approval_id, edited_body=new_body)
-                print("Approved with edits — would be sent now.")
+                print("Approved with edits and sent." if send_fn is not None else "Approved with edits — would be sent now.")
             elif choice == "r":
                 queue.reject(approval_id)
                 print("Rejected — will not be sent.")

@@ -122,16 +122,19 @@ These tests don't call any real API — they script exactly what each agent
 "decides" at each step (`tests/fakes.py`) and assert on the resulting
 graph state. This is what actually verifies the branching logic (the
 round-cap, the correction loop, the parallel join) works, independent of
-what a live LLM happens to say on a given run. All 11 pass as of this
+what a live LLM happens to say on a given run. All 15 pass as of this
 build: 7 on the graph itself, including the two trickiest negotiation
 cases — a deadlock resolved after exactly 2 rounds, and convergence via
 the Task Agent accepting a counter-proposal, both routing into the same
 `decide_action` join node, confirming the `defer=True` fan-in handles
 variable-length negotiation correctly — plus the reject → revise →
 re-review loop resolving on the one allowed retry, and standing firm
-(`final_action: "rejected"`) once retries are exhausted, plus 4 on
-`testing/send_test_email.py`'s message construction and SMTP call shape
-(mocked, no real network or credentials needed to run the suite).
+(`final_action: "rejected"`) once retries are exhausted; 1 on the in-memory
+demo calendar's timezone-naive/aware conflict handling; 4 on
+`testing/send_test_email.py`'s message construction and SMTP call shape;
+and 3 on `tools/gmail_tool.py:send_email`'s call shape plus the approval
+loop's send-before-flip-status and failed-send-stays-pending behavior
+(all mocked, no real network or credentials needed to run the suite).
 
 ## Setting up live mode (real Gmail + Calendar)
 
@@ -188,7 +191,13 @@ graph needs to change.
 - **Email autonomy boundary:** Task Agent drafts (`draft_email_response`)
   but the graph never calls a send function — `decide_action` only ever
   enqueues the draft via `approvals/approval_queue.py`, which requires an
-  explicit `approve()` call before anything would be sent.
+  explicit `approve()` call before anything would be sent. Sending itself
+  (`tools/gmail_tool.py:send_email`) is only ever invoked from inside that
+  approval loop, after a human types `a`/`e` at the prompt — live mode only
+  (`main.py:run_live`); demo mode has no real Gmail service to send
+  through, so `--review` there stays a local status flip that prints
+  "would be sent now," the same real-calls-except-Google trade-off as the
+  rest of demo mode.
 - **Control Tower rejection was a dead end:** previously, a tier-two reject
   just discarded the proposal (`final_action: "rejected"`) and dropped
   `corrections` on the floor. `task_revise_proposal` now feeds that
@@ -208,7 +217,7 @@ graph needs to change.
 ```
 config.py                  settings + governance knobs (round cap, wake interval)
 auth/google_auth.py        real OAuth flow for Gmail + Calendar
-tools/gmail_tool.py        real Gmail API: fetch_new_school_emails
+tools/gmail_tool.py        real Gmail API: fetch_new_school_emails, send_email
 tools/calendar_tool.py     real Calendar API: check_conflict, create_event, propose_alternates
 tools/demo_calendar.py     in-memory calendar for CHILDOPS_MODE=demo
 agents/school_agent.py     classification + Control-Tower-correction re-run

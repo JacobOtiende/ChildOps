@@ -22,7 +22,7 @@ from auth.google_auth import build_calendar_service, build_gmail_service
 from config import load_settings
 from graph.build_graph import Deps, build_graph
 from tools.demo_calendar import InMemoryCalendarService, default_seed_events
-from tools.gmail_tool import fetch_new_school_emails
+from tools.gmail_tool import fetch_new_school_emails, send_email
 
 
 def summarize(result: dict) -> str:
@@ -110,7 +110,10 @@ def run_live(settings, args) -> None:
         print(summarize(result))
 
     if args.review or approval_queue.list_pending():
-        run_red_alert_loop(approval_queue)
+        run_red_alert_loop(
+            approval_queue,
+            send_fn=lambda draft: send_email(gmail_service, draft["to"], draft["subject"], draft["body"]),
+        )
 
 
 def main() -> None:

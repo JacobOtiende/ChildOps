@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+from email.mime.text import MIMEText
 
 
 @dataclass
@@ -82,3 +83,17 @@ def fetch_new_school_emails(gmail_service, allowlist: list[str], max_results: in
             )
         )
     return emails
+
+
+def send_email(gmail_service, to: str, subject: str, body: str) -> str:
+    """Real, live call against the Gmail API -- sends a plain-text reply.
+    Only ever called from the approval loop after an explicit human
+    approve/edit choice (see approvals/approval_queue.py:run_red_alert_loop
+    and main.py:run_live); nothing in this project sends unprompted.
+    Returns the sent message's id."""
+    message = MIMEText(body)
+    message["to"] = to
+    message["subject"] = subject
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+    sent = gmail_service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    return sent["id"]
