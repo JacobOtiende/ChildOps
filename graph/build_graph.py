@@ -96,18 +96,41 @@ def make_task_propose_node(deps: Deps):
     return node
 
 
+def _describe_proposal(proposal: dict) -> str:
+    """Human-readable description for Control Tower review, deliberately
+    omitting fields the proposed action doesn't use (proposed_title/
+    proposed_datetime only mean anything for needs_calendar) instead of
+    dumping the raw proposal dict, so tier-one doesn't flag them as
+    "missing" when they were never applicable in the first place."""
+    parts = [
+        f"Proposed action: {proposal['proposed_action']}",
+        f"Urgency: {proposal['urgency_score']}/5, Importance: {proposal['importance_score']}/5",
+        f"Rationale: {proposal['rationale']}",
+    ]
+    if proposal.get("needs_calendar"):
+        parts.append(f"Calendar event: '{proposal.get('proposed_title')}' at {proposal.get('proposed_datetime')}")
+    if proposal.get("needs_email"):
+        parts.append("This will draft an email reply (never auto-sent; requires explicit approval).")
+    return "\n".join(parts)
+
+
 def make_control_tower_approve_node(deps: Deps):
     def node(state: ChildOpsState) -> dict:
         proposal = state["task_proposal"]
-        description = f"Task Agent proposes: {proposal}"
+        description = _describe_proposal(proposal)
         tier_one = control_tower.tier_one_review(deps.client, description, model=deps.model)
         tier_two = None
         approved = True
         # Tiering per design review: only a tier-one flag OR an action with
         # external consequence (an outbound email) earns the deeper pass.
         if tier_one.get("flagged") or proposal.get("needs_email"):
+            history = (
+                f"Original email from {state['email_sender']}, subject: {state['email_subject']}\n"
+                f"Body: {state['email_body']}\n\n"
+                f"School Agent classification: {state['classification']}"
+            )
             tier_two = control_tower.tier_two_review(
-                deps.client, description, tier_one.get("flag_reason"), history="", model=deps.model
+                deps.client, description, tier_one.get("flag_reason"), history=history, model=deps.model
             )
             approved = bool(tier_two.get("approved"))
         return {
