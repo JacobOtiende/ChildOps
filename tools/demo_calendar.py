@@ -12,6 +12,16 @@ import uuid
 from datetime import datetime, timedelta
 
 
+def _naive(iso: str) -> datetime:
+    """Parse an ISO 8601 datetime and strip any timezone offset. This
+    in-memory calendar only needs relative ordering for conflict-checking,
+    not absolute timezone correctness, but the LLM doesn't consistently
+    return offset-aware vs. offset-naive datetimes across calls -- comparing
+    one of each raises TypeError, so normalize both sides to naive here."""
+    dt = datetime.fromisoformat(iso)
+    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+
+
 class _Exec:
     def __init__(self, result):
         self._result = result
@@ -25,12 +35,12 @@ class _EventsResource:
         self._events: dict[str, dict] = {}
 
     def list(self, calendarId, timeMin, timeMax, singleEvents=True, orderBy="startTime"):
-        start = datetime.fromisoformat(timeMin)
-        end = datetime.fromisoformat(timeMax)
+        start = _naive(timeMin)
+        end = _naive(timeMax)
         items = []
         for event_id, event in self._events.items():
-            ev_start = datetime.fromisoformat(event["start"]["dateTime"])
-            ev_end = datetime.fromisoformat(event["end"]["dateTime"])
+            ev_start = _naive(event["start"]["dateTime"])
+            ev_end = _naive(event["end"]["dateTime"])
             if ev_start < end and ev_end > start:
                 items.append({**event, "id": event_id})
         return _Exec({"items": items})
