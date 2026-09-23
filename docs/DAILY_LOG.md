@@ -8,15 +8,17 @@ Resume the project and prepare live mode.
 ### Work Completed
 - Start-of-session review: working tree clean and in sync with `origin/master`; `pytest tests/` 15/15 passing.
 - The Google OAuth client JSON (type `installed` / Desktop app, redirect `http://localhost`) was renamed to `credentials/client_secret.json`, the path `.env` expects.
-- Created the `docs/` folder.
+- Created the `docs/` folder (commit `2b0ae12`, pushed).
+- `.env`: set `BROWSER` to Firefox for the OAuth sign-in and switched to `CHILDOPS_MODE=live`. Checked by loading the config (mode live, allowlist `jacksnrctzn@gmail.com`, secrets file found).
+- Tried the `doctor_note` test send. It failed with SMTP `535`; nothing was sent.
 
 ### Findings
 - `credentials/` is gitignored, so the client secret stays local only.
-- `.env` has no `TEST_SENDER_EMAIL` / `TEST_SENDER_APP_PASSWORD` yet, so `testing/send_test_email.py` can't send.
-- `.env` is still `CHILDOPS_MODE=demo`.
+- The SMTP failure happened because `TEST_SENDER_APP_PASSWORD` is still the `xxxx xxxx xxxx xxxx` placeholder from `.env.example`.
+- Live mode never marks emails read, so repeat runs reprocess the same unread emails.
 
 ### Next Session
-Run the first live-mode OAuth consent flow (see HANDOVER).
+Add a real App Password, resend `doctor_note`, then run the first live OAuth consent (see HANDOVER).
 
 ## 2026-09-21
 

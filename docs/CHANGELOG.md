@@ -4,6 +4,11 @@
 
 ### Changed
 - Google OAuth Desktop-app client credentials added locally at `credentials/client_secret.json` (gitignored, not committed). This unblocks the first live-mode OAuth consent run.
+- Local `.env` (gitignored) switched to `CHILDOPS_MODE=live`. `python main.py` now reads the real Gmail inbox and writes to the real Google Calendar instead of the demo data.
+- Local `.env` now sets `BROWSER` to Firefox, so the OAuth sign-in opens in Firefox rather than the system default browser. Uses Python's standard `webbrowser` lookup, so no code changed.
+
+### Fixed
+- None in code. The first `doctor_note` test send failed with SMTP `535 BadCredentials` because `TEST_SENDER_APP_PASSWORD` was still the `.env.example` placeholder. Nothing was sent; the fix is to generate a real App Password (see HANDOVER).
 
 ### Documentation
 - Added `docs/` (HANDOVER, DAILY_LOG, CHANGELOG, SKILLS_LOG), reconstructed from the 2026-09-21 git history.
