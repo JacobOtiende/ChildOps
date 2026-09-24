@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-23
+
+### Fixed
+- Live Google Calendar calls failed with `400 Bad Request` because the LLM gives datetimes with no UTC offset (e.g. `2026-09-23T00:00:00`). `tools/calendar_tool.py` now attaches the local offset to such times before `events.list`, `insert` and `patch` (`_rfc3339`). Times that already have an offset pass through unchanged.
+
+### Changed
+- Test sender changed to `jacob.o.otiende@gmail.com`. Local `.env` (gitignored) now uses it for both `TEST_SENDER_EMAIL` and `SCHOOL_SENDER_ALLOWLIST` (replacing `jacksnrctzn@gmail.com`).
+- `tests/test_graph_flow.py`: three assertions now check an event's date and time instead of the exact string, since stored datetimes now include an offset.
+
 ## 2026-09-22
 
 ### Changed

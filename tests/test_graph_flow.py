@@ -81,7 +81,7 @@ def test_happy_path_calendar_event_round_one_accept():
     assert "deadlock_decision" not in result or result["deadlock_decision"] is None
     # If decide_action had double-fired (a broken join), this would be 2.
     assert len(calendar_service._events.created) == 1
-    assert calendar_service._events.created[0]["start"]["dateTime"] == "2026-09-24T09:00:00"
+    assert calendar_service._events.created[0]["start"]["dateTime"].startswith("2026-09-24T09:00:00")
 
 
 def test_email_response_path_queues_for_approval_never_auto_sends():
@@ -219,7 +219,7 @@ def test_negotiation_escalates_to_control_tower_after_round_cap():
     assert result["deadlock_decision"]["decision_datetime"] == "2026-09-22T16:00:00"
     assert result["final_action"] == "event_created"
     assert len(calendar_service._events.created) == 1
-    assert calendar_service._events.created[0]["start"]["dateTime"] == "2026-09-22T16:00:00"
+    assert calendar_service._events.created[0]["start"]["dateTime"].startswith("2026-09-22T16:00:00")
 
 
 def test_negotiation_converges_when_task_agent_accepts_counter():
@@ -261,7 +261,7 @@ def test_negotiation_converges_when_task_agent_accepts_counter():
     assert result["negotiation_round"] == 1
     assert result.get("deadlock_decision") is None
     assert result["final_action"] == "event_created"
-    assert calendar_service._events.created[0]["start"]["dateTime"] == "2026-09-22T19:00:00"
+    assert calendar_service._events.created[0]["start"]["dateTime"].startswith("2026-09-22T19:00:00")
 
 
 def test_control_tower_rejects_then_approves_revised_proposal():

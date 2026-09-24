@@ -1,5 +1,28 @@
 # Daily Log
 
+## 2026-09-23
+
+### Objective
+Get live mode running end to end.
+
+### Work Completed
+- Changed the test sender to `jacob.o.otiende@gmail.com` in `.env` (`TEST_SENDER_EMAIL` and `SCHOOL_SENDER_ALLOWLIST`) and in the handover docs.
+- First live OAuth consent completed; `credentials/token.json` was created (2026-09-23 18:34).
+- The first live `python main.py` run picked up a real forwarded school email ("Fwd: Sep 23, 2026 Digest: 4 new messages from BASIS San Antonio…") and crashed in `calendar_negotiate` with a Calendar API `400 Bad Request`.
+- Fixed the crash in `tools/calendar_tool.py` by attaching the local offset to times that don't have one. Checked by rerunning the failing query against the real calendar (no error) and with `pytest tests/` (15/15 after updating three assertions).
+- The user reran `python main.py` and reported it worked.
+
+### Findings
+- The Calendar API requires RFC3339 times with an offset. Demo mode hid this because the in-memory calendar ignores timezones.
+- The Task Agent proposed a **00:00** event for the digest, probably because the email gave no time.
+- `TEST_SENDER_APP_PASSWORD` is still the placeholder, so `testing/send_test_email.py` has still not sent anything. The live run used a manually forwarded email instead.
+
+### Problems / Issues
+- The live-run output (classification, action, event, draft) was not captured in this session.
+
+### Next Session
+Set a real App Password and run the five scripted scenarios in live mode (see HANDOVER).
+
 ## 2026-09-22
 
 ### Objective

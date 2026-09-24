@@ -12,3 +12,5 @@
 | 2026-09-22 | Integration | Google Cloud OAuth client setup | Practiced | Created a Desktop-app OAuth client and installed it as `credentials/client_secret.json`, kept out of git; live consent flow not yet completed |
 | 2026-09-22 | Software Engineering | Environment-based configuration | Practiced | Moved the app to live mode and pointed the OAuth browser at Firefox through `.env` alone, with no code change; checked the result by loading the config |
 | 2026-09-22 | Software Engineering | Debugging (SMTP authentication) | Practiced | Traced a Gmail SMTP `535` failure to a placeholder App Password without exposing the secret |
+| 2026-09-23 | Integration | Google OAuth 2.0 consent flow (live) | Demonstrated | Completed the Desktop-app consent; `token.json` issued and used for a successful live Gmail + Calendar run |
+| 2026-09-23 | Software Engineering | Debugging (API datetime formats) | Demonstrated | Traced a Calendar API `400` to offset-naive datetimes, fixed at the tool boundary (`_rfc3339`), verified against the live API and tests |
