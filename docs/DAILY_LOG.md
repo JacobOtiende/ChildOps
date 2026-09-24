@@ -11,9 +11,11 @@ Get live mode running end to end.
 - The first live `python main.py` run picked up a real forwarded school email ("Fwd: Sep 23, 2026 Digest: 4 new messages from BASIS San Antonio…") and crashed in `calendar_negotiate` with a Calendar API `400 Bad Request`.
 - Fixed the crash in `tools/calendar_tool.py` by attaching the local offset to times that don't have one. Checked by rerunning the failing query against the real calendar (no error) and with `pytest tests/` (15/15 after updating three assertions).
 - The user reran `python main.py` and reported it worked.
+- A later live run over three unread forwarded digests (Medina Valley ISD, BASIS San Antonio, LACOSTE ES; about 6.5k, 13.7k and 6.7k characters) crashed with OpenAI `429` (30k tokens/min on gpt-4o). Raising the SDK's `max_retries` did not help, because it follows the sub-second retry-after hint. Added a longer backoff in `structured_call` instead (and reverted the `main.py` change). `pytest tests/` 17/17. The user reran and reported it worked.
 
 ### Findings
 - The Calendar API requires RFC3339 times with an offset. Demo mode hid this because the in-memory calendar ignores timezones.
+- Only the School Agent sends the full email body, but each email makes about 10 LLM calls, and OpenAI counts each call's `max_tokens` (1024) toward the per-minute limit up front. A few long digests can use up a whole minute's budget.
 - The Task Agent proposed a **00:00** event for the digest, probably because the email gave no time.
 - `TEST_SENDER_APP_PASSWORD` is still the placeholder, so `testing/send_test_email.py` has still not sent anything. The live run used a manually forwarded email instead.
 

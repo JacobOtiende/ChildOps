@@ -14,3 +14,4 @@
 | 2026-09-22 | Software Engineering | Debugging (SMTP authentication) | Practiced | Traced a Gmail SMTP `535` failure to a placeholder App Password without exposing the secret |
 | 2026-09-23 | Integration | Google OAuth 2.0 consent flow (live) | Demonstrated | Completed the Desktop-app consent; `token.json` issued and used for a successful live Gmail + Calendar run |
 | 2026-09-23 | Software Engineering | Debugging (API datetime formats) | Demonstrated | Traced a Calendar API `400` to offset-naive datetimes, fixed at the tool boundary (`_rfc3339`), verified against the live API and tests |
+| 2026-09-23 | AI / LLM | LLM API rate-limit handling | Demonstrated | Diagnosed OpenAI TPM 429s (SDK retries too short for a saturated window), added bounded backoff in `structured_call` with fail-fast on `insufficient_quota`, unit-tested and confirmed on a live run |

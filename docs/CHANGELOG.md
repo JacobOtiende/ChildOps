@@ -3,6 +3,7 @@
 ## 2026-09-23
 
 ### Fixed
+- Live runs crashed with OpenAI `429 rate_limit_exceeded` (gpt-4o, 30k tokens/min) while processing several long school digests. `agents/llm.py:structured_call` now backs off 2/4/8/16/40s on a 429 (about 70s total) and prints a `[rate limit]` notice while waiting. `insufficient_quota` (out of credit) still fails immediately. Covered by `tests/test_llm_backoff.py`.
 - Live Google Calendar calls failed with `400 Bad Request` because the LLM gives datetimes with no UTC offset (e.g. `2026-09-23T00:00:00`). `tools/calendar_tool.py` now attaches the local offset to such times before `events.list`, `insert` and `patch` (`_rfc3339`). Times that already have an offset pass through unchanged.
 
 ### Changed
